@@ -1,61 +1,130 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Feb 18 18:09:08 2018
+import cv2
+import numpy as np
+#import time 
+#import sys
+#import imutils 
 
-@author: catherine lee
-"""
 
-#script to run the shapedetector class
+CANNY = 250
 
-from pyimagesearch.shapedetector import ShapeDetector
-import argparse
-import imutils
-import cv2 
-import numpy as np 
+#for seeing if there are squares
+isSquares = False 
+MORPH = 7
 
-#consruct argument parse and parse argumets
 
-#NOTE: currently can only identify in images 
-ap = argparse.ArgumentParser()
-ap.add_argument("-1", "--image", required = True,
-                help = "path to the input image")
-args = vars(ap.parse_args())
+cap = cv2.VideoCapture(0)
 
-#load image and resize, so shapes can be seen better
-image = cv2.imread(args["image"])
-resized = imutils.resize(image, width=300)
-ratio = image.shape[0] / float(resized.shape[0])
+# Define the codec and create VideoWriter object
+fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
+video = cv2.VideoWriter('output.avi', fourcc, 20, (640,480))
 
-#convert the resized image to grayscale
-gray = cv2.cvtColor(resized,cv2.COLOR_BGR2GRAY)
-blurred = cv2.GaussianBlur(gray, (5,5),0)
-thresh = cv2.threshold(blurred,60,255, cv2.THRESH_BINARY)[1]
+# Set Range of color to be tracked in this case blue
+lowerBlue = np.array([100,100,100])
+upperBlue = np.array([140,255,255])
 
-# find contours in the thresholded image and initialize the
-# shape detector
-contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-	cv2.CHAIN_APPROX_SIMPLE)
-contours = contours[0] if imutils.is_cv2() else contours[1]
-sd = ShapeDetector()
+# Set Range of color to be tracked in this case red
+lowerRed = np.array([0,100,100])
+upperRed = np.array([10,255,255])
 
-# loop over the contours
-for c in contours:
-	# compute the center of the contour, then detect the name of the
-	# shape using only the contour
-	M = cv2.moments(c)
-	cX = int((M["m10"] / M["m00"]) * ratio)
-	cY = int((M["m01"] / M["m00"]) * ratio)
-	shape = sd.detect(c)
- 
-	# multiply the contour (x, y)-coordinates by the resize ratio,
-	# then draw the contours and the name of the shape on the image
-	c = c.astype("float")
-	c *= ratio
-	c = c.astype("int")
-	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
-	cv2.putText(image, shape, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX,
-		0.5, (255, 255, 255), 2)
- 
-	# show the output image
-	cv2.imshow("Image", image)
-	cv2.waitKey(0)
+#YELLOWS
+lowerYellow = np.array([2,50,75])
+upperYellow = np.array([100,100,200])
+
+#Set Colors
+#red = [0,0,255]
+#blue = [255,0,0]
+
+#dimensions of rect
+_width  = 600.0
+_height = 420.0
+_margin = 0.0
+
+#dimensions of rect 
+corners = np.array(
+	[
+		[[ _margin, _margin ]],
+		[[ 	_margin, _height + _margin]],
+		[[ _width + _margin, _height + _margin]],
+		[[ _width + _margin, _margin]],
+	]
+
+)
+
+pts_dst = np.array( corners, np.float32 )
+
+
+while True:
+    # Take each frame
+    _, frame = cap.read()
+    
+    # Convert RGB to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        
+    # Threshold the HSV image to get only color wanted
+    maskBlue = cv2.inRange(hsv, lowerBlue, upperBlue)
+    maskRed = cv2.inRange(hsv, lowerRed, upperRed)
+    maskYellow = cv2.inRange(hsv, lowerYellow, upperYellow)
+    
+   
+    maskBlueBilateral = cv2.bilateralFilter(maskBlue,1,10,120)
+    edgesBlue  = cv2.Canny( maskBlueBilateral , 10, CANNY )
+    kernelShape = cv2.getStructuringElement( cv2.MORPH_RECT, ( MORPH, MORPH ) )
+    closed = cv2.morphologyEx( edgesBlue, cv2.MORPH_CLOSE, kernelShape ) #fill in noisy spots
+    _, blueContours, h = cv2.findContours( closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
+
+
+   
+    #get contours for square objects
+    for cont in blueContours:
+        area = cv2.contourArea(cont)
+        if area > 300:
+            arc_len = cv2.arcLength( cont, True ) #arc length
+            approx = cv2.approxPolyDP(cont, 0.1 * arc_len, True)
+            
+            #c = max(cont, key=cv2.contourArea) #find the max contour 
+
+            if(len(approx) ==4): #4 edges --> rect 
+                #(x,y,w,h) = cv2.boundingRect(approx)
+                print("square looking ass ")
+                #isSquares = True
+                pts_src = np.array( approx, np.float32 )
+                #h, status = cv2.findHomography( pts_src, pts_dst )
+                out = cv2.warpPerspective( maskBlueBilateral, h, ( int( _width + _margin * 2 ), int( _height + _margin * 2 ) ) )
+                cv2.drawContours( frame, [approx], -1, ( 255, 0, 0 ), 2 )
+                #cv2.putText(frame, 'blue square',(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
+            if(len(approx==3)): #if 3 edges --> triangle
+                print("illuminati")
+                isTriangle = True
+                cv2.drawContours(frame,[approx], -1, (255,0,0),2)
+                
+                
+
+            else:
+                pass 
+
+        
+    #Make frame tracking object
+    #result = cv2.drawContours(frame, contours, -1, (0,0,0), 3)
+        
+    #Display live video frame
+    cv2.imshow('frame',frame)
+    cv2.imshow('mask',maskBlue)
+    #cv2.imshow('blue Median Blur Mask', medianMaskBlue)
+    #cv2.imshow('Result',result)
+    
+    #cv2.imshow('red mask', maskRed)
+    
+    #displaying shape edge detection
+    cv2.imshow('Blue Object Edges', edgesBlue)
+    #if isSquares:
+     #   cv2.imshow('output Squares', out)
+        
+    # Write frame to file
+    #frame = cv2.flip(frame,0)
+    video.write(frame)
+    if cv2.waitKey(5) == 27:
+        break
+
+cap.release()
+video.release()
+cv2.destroyAllWindows()
