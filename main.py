@@ -13,12 +13,12 @@ CANNY = 250
 MORPH = 7
 
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0) #1 for the webcam on usb
 
 #blue
 BLUE = (0, 0, 255)
 RED =  (255,0,0)
-
+YELLOW = (255,255,0)
 
 # Blue range \]
 lowerBlue = np.array([100,100,100])
@@ -51,7 +51,7 @@ corners = np.array(
 
 pts_dst = np.array( corners, np.float32 )
 
-def findShapes(colorMask,COLOR, shapeLen, colorString,shapeString ):
+def findTri(colorMask,COLOR, colorString ):
     #color is the thing you want to find aka the mast
     #shape 
     #just find both shapes ? 
@@ -65,17 +65,40 @@ def findShapes(colorMask,COLOR, shapeLen, colorString,shapeString ):
             arc_len = cv2.arcLength(cont,True)
             approx = cv2.approxPolyDP(cont, 0.1*arc_len, True)
             
-            if(len(approx) ==shapeLen): #REMEMBER OR 
-                print("found" + colorString + " " + shapeString)
+            if(len(approx) ==3): #REMEMBER OR 
+                print("found" + colorString + " triangle")
                 (x,y,w,h) = cv2.boundingRect(approx)
                 cv2.drawContours( frame, [approx], -1, COLOR, 2 )
-                cv2.putText(frame, colorString + " " + shapeString,(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
+                cv2.putText(frame, colorString + " triangle",(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
 
             else:
                 pass 
         
-    print("in function")
+def findRect(colorMask, COLOR, colorString):
+    colorMask = cv2.bilateralFilter(colorMask,1,10,120)
+    edges = cv2.Canny(colorMask,10,CANNY)
+    _, contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
     
+    for cont in contours:
+        area = cv2.contourArea(cont)
+        if area > 300:
+            arc_len = cv2.arcLength(cont, True)
+            approx = cv2.approxPolyDP(cont, 0.1 * arc_len, True)
+            
+            #c = max(cont, key=cv2.contourArea) #find the max contour 
+
+            if(len(approx) ==4):
+                #THIS SHIT DOES NOT WORK YET 
+                (x,y,w,h) = cv2.boundingRect(approx)
+                print("square ")
+                pts_src = np.array( approx, np.float32 )
+                h, status = cv2.findHomography( pts_src, pts_dst )
+                out = cv2.warpPerspective( colorMask, h, ( int( _width + _margin * 2 ), int( _height + _margin * 2 ) ) )
+                cv2.drawContours( frame, [approx], -1, ( 255, 0, 0 ), 2 )
+                cv2.putText(frame, colorString + ' square',(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
+
+            else:
+                pass 
 while True:
     # Take each frame
     _, frame = cap.read()
@@ -92,39 +115,51 @@ while True:
     
     colorArr = [maskBlue, maskRed, maskYellow]
 
-    maskBlueBilateral = cv2.bilateralFilter(maskBlue,1,10,120)
-    edgesBlue  = cv2.Canny( maskBlueBilateral , 10, CANNY )
-    kernelShape = cv2.getStructuringElement( cv2.MORPH_RECT, ( MORPH, MORPH ) )
-    closed = cv2.morphologyEx( edgesBlue, cv2.MORPH_CLOSE, kernelShape ) #fill in noisy spots
-    _, blueContours, hierarchy = cv2.findContours( closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
+#    maskBlueBilateral = cv2.bilateralFilter(maskBlue,1,10,120)
+#    edgesBlue  = cv2.Canny( maskBlueBilateral , 10, CANNY )
+#    kernelShape = cv2.getStructuringElement( cv2.MORPH_RECT, ( MORPH, MORPH ) )
+#    closed = cv2.morphologyEx( edgesBlue, cv2.MORPH_CLOSE, kernelShape ) #fill in noisy spots
+#    _, blueContours, hierarchy = cv2.findContours( closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
+#
+#
+#   
+#    #get contours for square objects
+#    for cont in blueContours:
+#        area = cv2.contourArea(cont)
+#        if area > 300:
+#            arc_len = cv2.arcLength( cont, True ) #arc length
+#            approx = cv2.approxPolyDP(cont, 0.1 * arc_len, True)
+#            
+#            #c = max(cont, key=cv2.contourArea) #find the max contour 
+#
+#            if(len(approx) ==4):
+#                print("square looking headass ")
+#                #SQUARES NOT WORKING BUT TRI IS PERFECT  
+#
+#                (a,b,c,d) = cv2.boundingRect(approx)
+#                isSquares = True
+#                pts_src = np.array( approx, np.float32 )
+#                h, status = cv2.findHomography( pts_src, pts_dst )
+#                out = cv2.warpPerspective( maskBlueBilateral, h, ( int( _width + _margin * 2 ), int( _height + _margin * 2 ) ) )
+#                cv2.drawContours( frame, [approx], -1, ( 255, 0, 0 ), 2 )
+#                cv2.putText(frame, 'blue square',(a,b),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
+#
+#            elif(len(approx) ==3):
+#                (x,y,w,h) = cv2.boundingRect(approx)
+#                cv2.drawContours(frame,[approx],-1,(255,0,0),2)
+#                cv2.putText(frame, 'blue tri', (x,y), cv2.FONT_HERSHEY_SIMPLEX,0.7,(255,0,0))
+#            else:
+#                pass
+    findRect(maskRed,RED,"red ")
+    findTri(maskRed,RED,"red ")
+    
+    findRect(maskBlue, BLUE, "blue")
+    findTri(maskBlue, BLUE, "blue")
+    
+    findRect(maskYellow, YELLOW,"yellow")
+    findRect(maskYellow, YELLOW, "yellow")
+    
 
-
-   
-    #get contours for square objects
-    for cont in blueContours:
-        area = cv2.contourArea(cont)
-        if area > 300:
-            arc_len = cv2.arcLength( cont, True ) #arc length
-            approx = cv2.approxPolyDP(cont, 0.1 * arc_len, True)
-            
-            #c = max(cont, key=cv2.contourArea) #find the max contour 
-
-            if(len(approx) ==4):
-                print("square looking headass ")
-                #SQUARES NOT WORKING BUT TRI IS PERFECT  
-
-                (a,b,c,d) = cv2.boundingRect(approx)
-                isSquares = True
-                pts_src = np.array( approx, np.float32 )
-                h, status = cv2.findHomography( pts_src, pts_dst )
-                out = cv2.warpPerspective( maskBlueBilateral, h, ( int( _width + _margin * 2 ), int( _height + _margin * 2 ) ) )
-                cv2.drawContours( frame, [approx], -1, ( 255, 0, 0 ), 2 )
-                cv2.putText(frame, 'blue square',(a,b),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
-
-
-            else:
-                pass
-    findShapes(maskRed,RED, 3,"red ","Triangle")
     #findShapes(maskBlue, "blue", 4, "square")
     
 
@@ -135,7 +170,6 @@ while True:
     cv2.imshow('frame',frame)
     cv2.imshow('mask',maskBlue)
 
-    cv2.imshow('Blue Object Edges', edgesBlue)
 #    if isSquares:
 #        cv2.imshow('output Squares', out)
         
