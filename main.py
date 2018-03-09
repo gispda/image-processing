@@ -16,21 +16,23 @@ MORPH = 7
 cap = cv2.VideoCapture(0) #1 for the webcam on usb
 
 #blue
-BLUE = (0, 0, 255)
-RED =  (255,0,0)
-YELLOW = (255,255,0)
+BLUE = (255, 0, 0)
+RED =  (0,0,255)
+YELLOW = (0,255,255)
 
-# Blue range \]
-lowerBlue = np.array([100,100,100])
-upperBlue = np.array([140,255,255])
+
+#NOTE: THESE ARE IN HSV 
+# Blue range 
+lowerBlue = np.array([110,100,100])
+upperBlue = np.array([130,255,255])
 
 # Red range
 lowerRed = np.array([0,100,100])
 upperRed = np.array([10,255,255])
 
 #Yellow Range
-lowerYellow = np.array([2,50,75])
-upperYellow = np.array([100,100,200])
+lowerYellow = np.array([20,100,100])
+upperYellow = np.array([50,255,255])
 
 
 #dimensions of rect
@@ -57,6 +59,8 @@ def findTri(colorMask,COLOR, colorString ):
     #just find both shapes ? 
     colorMask = cv2.bilateralFilter(colorMask, 1,10,120)
     edges  = cv2.Canny( colorMask , 10, CANNY)
+    cv2.imshow(colorString+ ' triangle edges',edges)
+
     _, contours, hierarchy = cv2.findContours( edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
     
     for cont in contours:
@@ -66,10 +70,10 @@ def findTri(colorMask,COLOR, colorString ):
             approx = cv2.approxPolyDP(cont, 0.1*arc_len, True)
             
             if(len(approx) ==3): #REMEMBER OR 
-                print("found" + colorString + " triangle")
+                print("found " + colorString + " triangle")
                 (x,y,w,h) = cv2.boundingRect(approx)
-                cv2.drawContours( frame, [approx], -1, COLOR, 2 )
-                cv2.putText(frame, colorString + " triangle",(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
+                cv2.drawContours( frame, [approx], -1, (0,0,0), 2 )
+                cv2.putText(frame, colorString + " triangle",(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, COLOR)
 
             else:
                 pass 
@@ -77,6 +81,7 @@ def findTri(colorMask,COLOR, colorString ):
 def findRect(colorMask, COLOR, colorString):
     colorMask = cv2.bilateralFilter(colorMask,1,10,120)
     edges = cv2.Canny(colorMask,10,CANNY)
+    cv2.imshow(colorString+ ' rect edges',edges)
     _, contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
     
     for cont in contours:
@@ -90,12 +95,12 @@ def findRect(colorMask, COLOR, colorString):
             if(len(approx) ==4):
                 #THIS SHIT DOES NOT WORK YET 
                 (x,y,w,h) = cv2.boundingRect(approx)
-                print("square ")
+                print("found " + colorString + " rectangle")
                 pts_src = np.array( approx, np.float32 )
                 h, status = cv2.findHomography( pts_src, pts_dst )
                 out = cv2.warpPerspective( colorMask, h, ( int( _width + _margin * 2 ), int( _height + _margin * 2 ) ) )
-                cv2.drawContours( frame, [approx], -1, ( 255, 0, 0 ), 2 )
-                cv2.putText(frame, colorString + ' square',(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
+                cv2.drawContours( frame, [approx], -1, ( 0, 0, 0 ), 2 )
+                cv2.putText(frame, colorString + ' square',(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, COLOR)
 
             else:
                 pass 
@@ -157,8 +162,7 @@ while True:
     findTri(maskBlue, BLUE, "blue")
     
     findRect(maskYellow, YELLOW,"yellow")
-    findRect(maskYellow, YELLOW, "yellow")
-    
+    findTri(maskYellow,YELLOW,"yellow")    
 
     #findShapes(maskBlue, "blue", 4, "square")
     
@@ -168,8 +172,10 @@ while True:
         
     #Display live video frame
     cv2.imshow('frame',frame)
-    cv2.imshow('mask',maskBlue)
-
+#    cv2.imshow('blue mask',maskBlue)
+#    cv2.imshow('red mask', maskRed)
+#    cv2.imshow('yellow mask', maskYellow)
+    
 #    if isSquares:
 #        cv2.imshow('output Squares', out)
         
