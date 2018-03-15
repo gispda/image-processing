@@ -53,25 +53,36 @@ corners = np.array(
 
 pts_dst = np.array( corners, np.float32 )
 
+def adjust_gamma():
+    print("TBD")
+
 def findTri(colorMask,COLOR, colorString ):
-    #color is the thing you want to find aka the mast
-    #shape 
-    #just find both shapes ? 
+    #Function to search for triangles by color
+    
+    #applies a filter to reduce noise
+    #ideally find one that works well underwater 
     colorMask = cv2.bilateralFilter(colorMask, 1,10,120)
+    
+    #edges/outlines objects of specified color
     edges  = cv2.Canny( colorMask , 10, CANNY)
+    
+    #shows the frame for triangle edges
     cv2.imshow(colorString+ ' triangle edges',edges)
 
     _, contours, hierarchy = cv2.findContours( edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
     
     for cont in contours:
         area = cv2.contourArea(cont)
-        if area > 300:
+        if area > 200:
             arc_len = cv2.arcLength(cont,True)
             approx = cv2.approxPolyDP(cont, 0.1*arc_len, True)
             
+            #if len == 3, then it is a triangle
             if(len(approx) ==3): #REMEMBER OR 
                 print("found " + colorString + " triangle")
                 (x,y,w,h) = cv2.boundingRect(approx)
+                
+                #draws contour if triangle is identified
                 cv2.drawContours( frame, [approx], -1, (0,0,0), 2 )
                 cv2.putText(frame, colorString + " triangle",(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.7, COLOR)
 
@@ -81,12 +92,15 @@ def findTri(colorMask,COLOR, colorString ):
 def findRect(colorMask, COLOR, colorString):
     colorMask = cv2.bilateralFilter(colorMask,1,10,120)
     edges = cv2.Canny(colorMask,10,CANNY)
+    kernelShape = cv2.getStructuringElement( cv2.MORPH_RECT, ( MORPH, MORPH ) )
+    closed = cv2.morphologyEx( edges, cv2.MORPH_CLOSE, kernelShape ) #fill in noisy spots
+
     cv2.imshow(colorString+ ' rect edges',edges)
-    _, contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, hierarchy = cv2.findContours(closed, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
     
     for cont in contours:
         area = cv2.contourArea(cont)
-        if area > 300:
+        if area > 200:
             arc_len = cv2.arcLength(cont, True)
             approx = cv2.approxPolyDP(cont, 0.1 * arc_len, True)
             
@@ -118,7 +132,6 @@ while True:
     
     #gotta make a black mask for finding Numbers
     
-    colorArr = [maskBlue, maskRed, maskYellow]
 
 #    maskBlueBilateral = cv2.bilateralFilter(maskBlue,1,10,120)
 #    edgesBlue  = cv2.Canny( maskBlueBilateral , 10, CANNY )
@@ -156,12 +169,13 @@ while True:
 #            else:
 #                pass
     findRect(maskRed,RED,"red ")
+    findRect(maskBlue, BLUE, "blue")
+    findRect(maskYellow, YELLOW,"yellow")
+
     findTri(maskRed,RED,"red ")
     
-    findRect(maskBlue, BLUE, "blue")
     findTri(maskBlue, BLUE, "blue")
     
-    findRect(maskYellow, YELLOW,"yellow")
     findTri(maskYellow,YELLOW,"yellow")    
 
     #findShapes(maskBlue, "blue", 4, "square")
@@ -181,6 +195,8 @@ while True:
         
     # Write frame to file
     #frame = cv2.flip(frame,0)
+    
+    #Press ESC to exit 
     if cv2.waitKey(5) == 27:
         break
 
