@@ -17,7 +17,7 @@ while True:
 
 
 
-    mask=cv2.inRange(hsv,lowerBlue,upperBlue)
+    mask=cv2.inRange(hsv,lower_red,upper_red)
     mask = cv2.bilateralFilter(mask,1,10,120)
 
     res=cv2.bitwise_and(frame,frame, mask=mask)

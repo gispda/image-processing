@@ -7,9 +7,29 @@ import os
 
 # module level variables ##########################################################################
 MIN_CONTOUR_AREA = 100
+isSquare = False
+
 
 RESIZED_IMAGE_WIDTH = 20
 RESIZED_IMAGE_HEIGHT = 30
+
+#dimensions of rect
+_width  = 600.0
+_height = 420.0
+_margin = 0.0
+
+#dimensions of rect 
+corners = np.array(
+	[
+		[[ _margin, _margin ]],
+		[[ 	_margin, _height + _margin]],
+		[[ _width + _margin, _height + _margin]],
+		[[ _width + _margin, _margin]],
+	]
+
+)
+
+pts_dst = np.array( corners, np.float32 )
 
 ###################################################################################################
 class ContourWithData():
@@ -64,16 +84,15 @@ def fuckThis(image):
 
     imgTestingNumbers = cv2.imread(image)          # read in testing numbers image
 
-    if imgTestingNumbers is None:                           # if image was not read successfully
-        os.system("pause")                                  # pause so user can see error message
-        return                                              # and exit function (which exits program)
     # end if
 
-    imgGray = cv2.cvtColor(imgTestingNumbers, cv2.COLOR_BGR2GRAY)       # get grayscale image
-    imgBlurred = cv2.GaussianBlur(imgGray, (5,5), 0)                    # blur
+    
+    #cv2.imshow("gray", imgGray)
+    imgBlurred = cv2.GaussianBlur(imgTestingNumbers, (5,5), 0)                    # blur
+    gray = cv2.cvtColor(imgBlurred, cv2.COLOR_BGR2GRAY)
 
                                                         # filter image from grayscale to black and white
-    imgThresh = cv2.adaptiveThreshold(imgBlurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,   11, 2)                                    # constant subtracted from the mean or weighted mean
+    imgThresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)                                    # constant subtracted from the mean or weighted mean
 
     imgThreshCopy = imgThresh.copy()        # make a copy of the thresh image, this in necessary b/c findContours modifies the image
 
@@ -135,12 +154,4 @@ def fuckThis(image):
 ###################################################################################################
 for elem in arr:
     fuckThis(elem)
-
-
-
-
-
-
-
-
 
