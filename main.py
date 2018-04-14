@@ -7,6 +7,8 @@ import numpy as np
 
 
 #for seeing if there are squares
+
+#turns out we don't need to do both ocr and shape detection!!!! Can choose the side we want, but if we bump into the shape and destroy it, we are FUCKEDDDDD
 isSquares = False 
 
 CANNY = 250
@@ -100,7 +102,7 @@ def findRect(colorMask, COLOR, colorString):
     
     for cont in contours:
         area = cv2.contourArea(cont)
-        if area > 200:
+        if area > 200: #maybe change the area here
             arc_len = cv2.arcLength(cont, True)
             approx = cv2.approxPolyDP(cont, 0.1 * arc_len, True)
             
@@ -186,9 +188,9 @@ while True:
         
     #Display live video frame
     cv2.imshow('frame',frame)
-#    cv2.imshow('blue mask',maskBlue)
-#    cv2.imshow('red mask', maskRed)
-#    cv2.imshow('yellow mask', maskYellow)
+    cv2.imshow('blue mask',maskBlue)
+    cv2.imshow('red mask', maskRed)
+    cv2.imshow('yellow mask', maskYellow)
     
 #    if isSquares:
 #        cv2.imshow('output Squares', out)
