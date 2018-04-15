@@ -22,7 +22,7 @@ while True:
 
     res=cv2.bitwise_and(frame,frame, mask=mask)
     
-    edges  = cv2.Canny( res , 10, CANNY )
+    edges  = cv2.Canny( res , 10, CANNY)
     _, contours, hierarchy = cv2.findContours( edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
     for cont in contours:
         area = cv2.contourArea(cont)
